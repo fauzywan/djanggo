@@ -1,0 +1,87 @@
+{
+    "dataset": {
+        "jumlah_data": 2622,
+        "jumlah_data_latih": 2097,
+        "jumlah_data_uji": 525,
+        "test_size": 0.2,
+        "random_state": 42,
+        "split": "stratified"
+    },
+    "label_mapping_cnn": {
+        "negatif": 0,
+        "netral": 1,
+        "positif": 2
+    },
+    "preprocessing_umum": [
+        "cleaning",
+        "case_folding",
+        "tokenisasi",
+        "normalisasi"
+    ],
+    "preprocessing_svm": [
+        "stopword_removal_selektif",
+        "stemming",
+        "tfidf"
+    ],
+    "preprocessing_cnn": [
+        "token_indexing",
+        "padding_truncating",
+        "word_embedding"
+    ],
+    "svm": {
+        "model": "LinearSVC",
+        "C": 0.1,
+        "ngram_range": [
+            1,
+            2
+        ],
+        "min_df": 5,
+        "sublinear_tf": true,
+        "jumlah_fitur": 1830,
+        "class_weight": {
+            "negatif": 4.314814814814815,
+            "netral": 1.0623100303951367,
+            "positif": 0.5473766640563822
+        },
+        "cv": "Stratified 5-Fold",
+        "macro_f1_cv": 0.622720806224925,
+        "training_time": 0.03090304100078356,
+        "prediction_time": 0.0031144889999268344
+    },
+    "cnn": {
+        "max_len": 150,
+        "vocab_size": 8539,
+        "embedding_dim": 128,
+        "filters": 128,
+        "kernel_size": 3,
+        "dense_units": 64,
+        "dropout": 0.5,
+        "batch_size": 32,
+        "epochs": 4,
+        "class_weight": {
+            "0": 4.314814814814815,
+            "1": 1.0623100303951367,
+            "2": 0.5473766640563822
+        },
+        "cv": "Stratified 5-Fold",
+        "macro_f1_cv": 0.6264132880198685,
+        "training_time": 27.243426645999534,
+        "prediction_time": 1.279033392999736
+    },
+    "hasil_test": {
+        "svm": {
+            "accuracy": 0.7657142857142857,
+            "precision_macro": 0.675455261750778,
+            "recall_macro": 0.6275097484517165,
+            "macro_f1": 0.6452295917994259,
+            "weighted_f1": 0.7595855691422537
+        },
+        "cnn": {
+            "accuracy": 0.7542857142857143,
+            "precision_macro": 0.6405754250598193,
+            "recall_macro": 0.6623170306938179,
+            "macro_f1": 0.6396809139735781,
+            "weighted_f1": 0.7574312346882165
+        }
+    }
+}
