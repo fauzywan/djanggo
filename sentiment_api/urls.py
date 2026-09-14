@@ -3,6 +3,7 @@ from .views import (
     AnalyzeSentimentView,
     DownloadResultView,
     HealthCheckView,
+    DownloadPDFView,
     SingleReviewPredictView,
 )
 
@@ -20,4 +21,6 @@ urlpatterns = [
 
     # Pengujian pada satu ulasan
     path('predict-single', SingleReviewPredictView.as_view(), name='predict_single'),
+    path('download-pdf', DownloadPDFView.as_view(), name='download_pdf')
+    
 ]
