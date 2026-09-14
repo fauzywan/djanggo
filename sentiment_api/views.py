@@ -20,7 +20,24 @@ from reportlab.lib import colors
 # Import lokal (Serializer & Service)
 from .serializers import CSVUploadSerializer, SingleReviewSerializer
 from .services import SentimentAnalysisService, SVMModelService
+from .models import AnalysisHistory
+from .serializers import AnalysisHistorySerializer
 
+class HistoryListView(APIView):
+    """
+    Class-Based View: GET /api/v1/history/
+    Mengembalikan daftar riwayat analisis dari model AnalysisHistory.
+    """
+    def get(self, request, *args, **kwargs):
+        history = AnalysisHistory.objects.all()
+        serializer = AnalysisHistorySerializer(history, many=True)
+        return Response(
+            {
+                "status": "success",
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
 
 class AnalyzeSentimentView(APIView):
     """

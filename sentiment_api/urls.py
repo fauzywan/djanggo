@@ -5,6 +5,7 @@ from .views import (
     HealthCheckView,
     DownloadPDFView,
     SingleReviewPredictView,
+    HistoryListView,
 )
 
 app_name = 'sentiment_api'
@@ -21,6 +22,7 @@ urlpatterns = [
 
     # Pengujian pada satu ulasan
     path('predict-single', SingleReviewPredictView.as_view(), name='predict_single'),
-    path('download-pdf', DownloadPDFView.as_view(), name='download_pdf')
+    path('download-pdf', DownloadPDFView.as_view(), name='download_pdf'),
+    path('history', HistoryListView.as_view(), name='history')
     
 ]

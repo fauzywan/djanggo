@@ -24,6 +24,9 @@ import logging
 import joblib
 import pandas as pd
 import warnings
+from .models import AnalysisHistory
+
+
 try:
     from sklearn.exceptions import InconsistentVersionWarning
     warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
@@ -67,8 +70,8 @@ class BaseSentimentPredictor(ABC):
 
 # =====================================================================
 # 2. ENCAPSULATION: Prapemrosesan Teks (Text Preprocessor)
-#    Sesuai pipeline metadata: cleaning, case_folding, tokenisasi, normalisasi,
-#    stopword_removal_selektif, stemming.
+#   Sesuai pipeline metadata: cleaning, case_folding, tokenisasi, normalisasi,
+#   stopword_removal_selektif, stemming.
 # =====================================================================
 class TextPreprocessor:
     """
@@ -435,6 +438,18 @@ class SentimentAnalysisService:
 
         # 7. Metadata Waktu & Berkas
         processing_time = round(time.time() - start_time, 3)
+
+        # 8. Simpan riwayat secara permanen ke database menggunakan model AnalysisHistory
+        AnalysisHistory.objects.create(
+            file_name=file_name,
+            total_rows=total_rows_uploaded,
+            valid_rows=valid_rows_processed,
+            model_used=self.predictor.model_name,
+            positive_count=pos_count,
+            neutral_count=net_count,
+            negative_count=neg_count,
+            processing_time_seconds=processing_time
+        )
 
         return {
             "status": "success",
