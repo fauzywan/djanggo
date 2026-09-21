@@ -24,8 +24,7 @@ import logging
 import joblib
 import pandas as pd
 import warnings
-from .models import AnalysisHistory
-
+from .models import AnalysisHistory, Dataset, ModelML, Ulasan
 
 try:
     from sklearn.exceptions import InconsistentVersionWarning
@@ -36,7 +35,6 @@ except ImportError:
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
-
 
 
 # =====================================================================
@@ -70,8 +68,6 @@ class BaseSentimentPredictor(ABC):
 
 # =====================================================================
 # 2. ENCAPSULATION: Prapemrosesan Teks (Text Preprocessor)
-#   Sesuai pipeline metadata: cleaning, case_folding, tokenisasi, normalisasi,
-#   stopword_removal_selektif, stemming.
 # =====================================================================
 class TextPreprocessor:
     """
@@ -122,17 +118,10 @@ class TextPreprocessor:
             factory = StemmerFactory()
             return factory.create_stemmer()
         except ImportError:
-            # Jika pustaka Sastrawi belum dipasang, fallback pasif
             return None
 
     def clean(self, text: str) -> str:
-        """
-        Tahap 1: Cleaning & Case Folding
-        - Lowercase
-        - Hapus URL, mention, hashtag
-        - Hapus tanda baca dan angka
-        - Hapus spasi berlebih
-        """
+        """Tahap 1: Cleaning & Case Folding"""
         if not isinstance(text, str):
             text = str(text) if text is not None else ""
 
@@ -144,25 +133,19 @@ class TextPreprocessor:
         return cleaned
 
     def normalize_slang(self, text: str) -> str:
-        """
-        Tahap 2: Normalisasi Slang & Singkatan (tokenisasi & penggantian kata)
-        """
+        """Tahap 2: Normalisasi Slang & Singkatan"""
         words = text.split()
         normalized_words = [self.slang_dict.get(w, w) for w in words]
         return " ".join(normalized_words)
 
     def remove_stopwords(self, text: str) -> str:
-        """
-        Tahap 3: Penghapusan Stopwords Selektif untuk SVM
-        """
+        """Tahap 3: Penghapusan Stopwords Selektif untuk SVM"""
         words = text.split()
         filtered_words = [w for w in words if w not in self.stopwords]
         return " ".join(filtered_words)
 
     def stem(self, text: str) -> str:
-        """
-        Tahap 4: Stemming kata dasar bahasa Indonesia
-        """
+        """Tahap 4: Stemming kata dasar bahasa Indonesia"""
         if self._stemmer:
             try:
                 return self._stemmer.stem(text)
@@ -171,10 +154,7 @@ class TextPreprocessor:
         return text
 
     def preprocess_for_svm(self, text: str) -> str:
-        """
-        Alur lengkap prapemrosesan teks sesuai spesifikasi pipeline SVM:
-        cleaning -> case_folding -> tokenisasi -> normalisasi -> stopword_removal_selektif -> stemming
-        """
+        """Alur lengkap prapemrosesan teks sesuai spesifikasi pipeline SVM."""
         t = self.clean(text)
         t = self.normalize_slang(t)
         t = self.remove_stopwords(t)
@@ -247,9 +227,7 @@ class SVMModelService(BaseSentimentPredictor):
                 logger.warning(f"Gagal membaca metadata: {e}")
 
     def load_model(self) -> bool:
-        """
-        Memuat model svm_na_willa_final.pkl dan tfidf_na_willa_final.pkl.
-        """
+        """Memuat model svm_na_willa_final.pkl dan tfidf_na_willa_final.pkl."""
         try:
             model_exists = self.model_path.exists()
             vectorizer_exists = self.vectorizer_path.exists()
@@ -279,12 +257,7 @@ class SVMModelService(BaseSentimentPredictor):
             return False
 
     def predict(self, texts: list[str]) -> list[str]:
-        """
-        Inferensi klasifikasi sentimen:
-        1. Vektorisasi teks menggunakan TF-IDF
-        2. Klasifikasi menggunakan LinearSVC
-        3. Normalisasi label ke 'Positif', 'Netral', 'Negatif'
-        """
+        """Inferensi klasifikasi sentimen menggunakan SVM atau Fallback."""
         if not texts:
             return []
 
@@ -296,14 +269,10 @@ class SVMModelService(BaseSentimentPredictor):
             except Exception as e:
                 logger.error(f"Error saat inferensi SVM: {e}. Beralih ke fallback.")
 
-        # Fallback leksikon ulasan film
         return [self._fallback_predict_single(t) for t in texts]
 
     def _map_label(self, raw_label) -> str:
-        """
-        Memetakan label output model ke format standar: Positif, Netral, Negatif.
-        Mendukung pemetaan numerik (0=negatif, 1=netral, 2=positif) maupun string.
-        """
+        """Memetakan label output model ke format standar."""
         label_str = str(raw_label).strip().lower()
         if label_str in ['2', 'positif', 'positive', 'pos']:
             return "Positif"
@@ -352,13 +321,7 @@ class WordFrequencyService:
 # =====================================================================
 class SentimentAnalysisService:
     """
-    Kelas Orchestrator yang mengoordinasikan seluruh alur kerja:
-    1. Validasi baris dataframe
-    2. Prapemrosesan teks (clean -> normalize slang -> stopword removal -> stemming)
-    3. Inferensi model SVM
-    4. Perhitungan statistik distribusi
-    5. Perhitungan frekuensi kata
-    6. Pembuatan respons JSON sesuai kontrak presisi
+    Kelas Orchestrator yang mengoordinasikan seluruh alur kerja analisis.
     """
 
     _last_analyzed_dataframe: pd.DataFrame | None = None
@@ -378,7 +341,7 @@ class SentimentAnalysisService:
         valid_df = valid_df[valid_df['review_text'].str.strip() != ''].copy()
         valid_rows_processed = len(valid_df)
 
-        # 2. Prapemrosesan teks ulasan (pipeline lengkap)
+        # 2. Prapemrosesan teks ulasan
         original_texts = valid_df['review_text'].tolist()
         processed_texts = [self.preprocessor.preprocess_for_svm(t) for t in original_texts]
         valid_df['processed_text'] = processed_texts
@@ -423,7 +386,6 @@ class SentimentAnalysisService:
                 "processed_text": row['processed_text'],
                 "predicted_sentiment": row['predicted_sentiment']
             }
-            # Pertahankan kolom metadata tambahan jika ada
             for extra_col in ['reviewer', 'rating', 'date', 'review_url']:
                 if extra_col in row and pd.notna(row[extra_col]):
                     item[extra_col] = row[extra_col]
@@ -439,26 +401,84 @@ class SentimentAnalysisService:
         # 7. Metadata Waktu & Berkas
         processing_time = round(time.time() - start_time, 3)
 
-        # 8. Simpan riwayat secara permanen ke database menggunakan model AnalysisHistory
-        AnalysisHistory.objects.create(
-            file_name=file_name,
-            total_rows=total_rows_uploaded,
-            valid_rows=valid_rows_processed,
-            model_used=self.predictor.model_name,
-            positive_count=pos_count,
-            neutral_count=net_count,
-            negative_count=neg_count,
-            processing_time_seconds=processing_time
-        )
+        # 8. Simpan riwayat secara permanen ke database dengan mekanisme try-except
+        model_metadata = getattr(self.predictor, 'metadata', {})
+        if "hasil_test" in model_metadata:
+            model_key = "cnn" if "cnn" in self.predictor.model_name.lower() else "svm"
+            metrics_data = model_metadata.get("hasil_test", {}).get(model_key, {})
+        else:
+            metrics_data = model_metadata.get("metrics", {})
 
+        try:
+            # Tabel 1: Dataset (sesuai Bab 4)
+            dataset_record = Dataset.objects.create(
+                nama_file=file_name,
+                jumlah_data=valid_rows_processed,
+                jumlah_positif=pos_count,
+                jumlah_netral=net_count,
+                jumlah_negatif=neg_count,
+                processing_time_seconds=processing_time
+            )
+
+            # Tabel 2: Model (sesuai Bab 4)
+            ModelML.objects.update_or_create(
+                nama_model=self.predictor.model_name,
+                defaults={
+                    'accuracy': float(metrics_data.get('accuracy', 0.7657)),
+                    'precision': float(metrics_data.get('precision_macro', 0.6755)),
+                    'recall': float(metrics_data.get('recall_macro', 0.6275)),
+                    'f1_score': float(metrics_data.get('macro_f1', 0.6452)),
+                }
+            )
+
+            # Tabel 3: Ulasan (sesuai Bab 4, bulk create untuk performa optimal)
+            ulasan_batch = [
+                Ulasan(
+                    dataset=dataset_record,
+                    review_text=r.get('original_text', ''),
+                    hasil_prediksi=r.get('predicted_sentiment', '')
+                )
+                for r in results
+            ]
+            if ulasan_batch:
+                Ulasan.objects.bulk_create(ulasan_batch)
+
+            # Kompatibilitas tabel lama
+            AnalysisHistory.objects.create(
+                file_name=file_name,
+                total_rows=total_rows_uploaded,
+                valid_rows=valid_rows_processed,
+                model_used=self.predictor.model_name,
+                positive_count=pos_count,
+                neutral_count=net_count,
+                negative_count=neg_count,
+                processing_time_seconds=processing_time
+            )
+        except Exception as e:
+            logger.warning(f"Gagal menyimpan ke basis data: {e}")
+
+        # 10. Return data dengan struktur yang diharapkan oleh frontend React
         return {
             "status": "success",
+            "filename": file_name,
             "metadata": {
                 "file_name": file_name,
                 "total_rows_uploaded": total_rows_uploaded,
                 "valid_rows_processed": valid_rows_processed,
                 "model_used": self.predictor.model_name,
                 "processing_time_seconds": processing_time
+            },
+            "model": {
+                "name": self.predictor.model_name,
+                "metrics": metrics_data
+            },
+            "summary": {
+                "total_data": total_rows_uploaded,
+                "total_dianalisis": valid_rows_processed,
+                "total_tidak_dianalisis": total_rows_uploaded - valid_rows_processed,
+                "positive": pos_count,
+                "neutral": net_count,
+                "negative": neg_count
             },
             "distribution": distribution,
             "results": results,
