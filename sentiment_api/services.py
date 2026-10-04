@@ -424,10 +424,10 @@ class SentimentAnalysisService:
             ModelML.objects.update_or_create(
                 nama_model=self.predictor.model_name,
                 defaults={
-                    'accuracy': float(metrics_data.get('accuracy', 0.7657)),
-                    'precision': float(metrics_data.get('precision_macro', 0.6755)),
-                    'recall': float(metrics_data.get('recall_macro', 0.6275)),
-                    'f1_score': float(metrics_data.get('macro_f1', 0.6452)),
+                    'accuracy': float(metrics_data.get('accuracy', 0.8868)),
+                    'precision': float(metrics_data.get('precision_macro', 0.8404)),
+                    'recall': float(metrics_data.get('recall_macro', 0.7284)),
+                    'f1_score': float(metrics_data.get('macro_f1', 0.7629)),
                 }
             )
 
